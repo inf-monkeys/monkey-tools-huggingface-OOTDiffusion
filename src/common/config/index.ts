@@ -31,10 +31,16 @@ export interface S3Config {
   publicUrl: string;
 }
 
+export interface ProxyConfig {
+  url?: string;
+  matchDomains: string[];
+}
+
 export interface Config {
   server: ServerConfig;
   redis: RedisConfig;
   s3: S3Config;
+  proxy: ProxyConfig;
 }
 
 const port = readConfig('server.port', 3000);
@@ -56,6 +62,10 @@ export const config: Config = {
     prefix: readConfig('redis.prefix', 'monkeys:'),
   },
   s3: readConfig('s3', {}),
+  proxy: {
+    url: readConfig('proxy.url', ''),
+    matchDomains: readConfig('proxy.matchDomains', ['hf.space']),
+  },
 };
 
 const validateConfig = () => {

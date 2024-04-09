@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import bodyParser from 'body-parser';
+import 'src/common/utils/setup-proxy';
 import { AppModule } from './app.module';
 import { ExceptionsFilter } from './common/filters/exception.filter';
 
