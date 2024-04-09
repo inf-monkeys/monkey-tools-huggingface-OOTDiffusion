@@ -1,13 +1,11 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CacheModule } from './common/cache/cache.module';
-import { LockModule } from './common/lock/lock.module';
 import { CommonMiddleware } from './common/middlewares/common.middleware';
-import { ExampleModule } from './modules/example/example.module';
+import { OotdifussionModule } from './modules/ootdifussion/ootdifussion.module';
 
 @Module({
-  imports: [CacheModule, LockModule, ExampleModule],
+  imports: [OotdifussionModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -1,5 +1,15 @@
+import fs from 'fs';
+import path from 'path';
 import { AuthConfig, AuthType } from '../typings/manifest';
 import { readConfig } from './readYaml';
+
+export const ROOT_FOLDER = path.dirname(
+  path.dirname(path.dirname(path.dirname(__filename))),
+);
+export const DOWNLOAD_FOLDER = path.join(ROOT_FOLDER, 'downloads');
+if (!fs.existsSync(DOWNLOAD_FOLDER)) {
+  fs.mkdirSync(DOWNLOAD_FOLDER);
+}
 
 export interface ServerConfig {
   port: number;
@@ -12,9 +22,19 @@ export interface RedisConfig {
   prefix: string;
 }
 
+export interface S3Config {
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpoint: string;
+  region: string;
+  bucketName: string;
+  publicUrl: string;
+}
+
 export interface Config {
   server: ServerConfig;
   redis: RedisConfig;
+  s3: S3Config;
 }
 
 const port = readConfig('server.port', 3000);
@@ -35,6 +55,7 @@ export const config: Config = {
     url: readConfig('redis.url'),
     prefix: readConfig('redis.prefix', 'monkeys:'),
   },
+  s3: readConfig('s3', {}),
 };
 
 const validateConfig = () => {
