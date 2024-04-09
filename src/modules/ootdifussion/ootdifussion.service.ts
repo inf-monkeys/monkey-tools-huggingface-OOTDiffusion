@@ -12,7 +12,7 @@ export interface OOTDiffusionHalfBodyParams {
   clothesImage: string;
   imageCount?: number;
   steps?: number;
-  guidanceScale: number;
+  guidanceScale?: number;
   seed?: number;
 }
 
@@ -28,7 +28,7 @@ export interface OOTDiffusionFullBodyParams {
   clothesImage: string;
   imageCount?: number;
   steps?: number;
-  guidanceScale: number;
+  guidanceScale?: number;
   seed?: number;
 }
 
@@ -43,15 +43,16 @@ export interface HuggingFaceMessage {
         };
       }>
     >;
+    is_generating: boolean;
+    duration: number;
+    average_duration: number;
   };
-  is_generating: boolean;
-  duration: number;
-  average_duration: number;
+  success: boolean;
 }
 
 @Injectable()
 export class OotdifussionService {
-  private async uploadImage(imageUrl: string): Promise<string> {
+  private async uploadImageToHuggingFace(imageUrl: string): Promise<string> {
     const uploadApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/upload?upload_id=${generateRandomString(11)}`;
     // Path to your file
     const filePath = await downloadFile(imageUrl);
@@ -78,33 +79,67 @@ export class OotdifussionService {
     return data[0];
   }
 
-  private async poolForResult(sessionHash: string) {
+  private async poolForResult(sessionHash: string): Promise<string[]> {
     const dataApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/data?session_hash=${sessionHash}`;
     const { data: stream } = await axios.get(dataApi, {
       responseType: 'stream',
     });
     const timout = 300;
     const start = +new Date();
-    for await (const part of stream) {
+    const result: string[] = [];
+
+    outerLoop: for await (const part of stream) {
       const strs: string[] = part.toString('utf-8').split('\n');
       for (const str of strs) {
         if (!str.trim()) {
           continue;
         }
         logger.info('生成结果: ', str);
-        const result: HuggingFaceMessage = JSON.parse(
+        const message: HuggingFaceMessage = JSON.parse(
           str.replace('data: ', ''),
         );
-        if (result.msg === 'process_completed') {
-          const generatedImagePath = result.output.data[0][0].image.path;
-          return `
-          https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${generatedImagePath}`;
+        if (message.msg === 'process_completed') {
+          const { success } = message;
+          if (!success) {
+            throw new Error('生成失败');
+          }
+          for (const item of message.output.data[0]) {
+            const {
+              image: { path },
+            } = item;
+            result.push(`
+            https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${path}`);
+          }
+          break outerLoop;
         }
       }
       if (+new Date() - start >= timout * 1000) {
         throw new Error('生成超时');
       }
     }
+    logger.info('生成成功: ', result);
+    return result;
+  }
+
+  private async uploadImageToS3(
+    session_hash: string,
+    generatedImages: string[],
+  ): Promise<string[]> {
+    // 4. Upload to s3
+    logger.info('开始上传到 oss ');
+    const result: string[] = [];
+    for (const generatedImageUrl of generatedImages) {
+      logger.info(`上传文件: ${generatedImageUrl}`);
+      const buffer = await downloadFileAsBuffer(generatedImageUrl);
+      const s3Helpers = new S3Helpers();
+      const url = await s3Helpers.uploadFile(
+        buffer,
+        `artifacts/huggingface/ootdifussion/${session_hash}.png`,
+      );
+      logger.info(`上传文件 ${generatedImageUrl} 成功`);
+      result.push(url);
+    }
+    return result;
   }
 
   public async halfBody(params: OOTDiffusionHalfBodyParams) {
@@ -126,8 +161,8 @@ export class OotdifussionService {
     const session_hash = generateRandomString(11);
 
     // 1. upload image
-    const bodyImagePath = await this.uploadImage(bodyImage);
-    const clothImagePath = await this.uploadImage(clothesImage);
+    const bodyImagePath = await this.uploadImageToHuggingFace(bodyImage);
+    const clothImagePath = await this.uploadImageToHuggingFace(clothesImage);
 
     // 2. join queue
     const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/join?__theme=light`;
@@ -161,17 +196,12 @@ export class OotdifussionService {
     });
 
     // 3. Get data stream
-    const generatedImageUrl = await this.poolForResult(session_hash);
+    const generatedImages = await this.poolForResult(session_hash);
 
     // 4. Upload to s3
-    const buffer = await downloadFileAsBuffer(generatedImageUrl);
-    const s3Helpers = new S3Helpers();
-    const url = await s3Helpers.uploadFile(
-      buffer,
-      `artifacts/huggingface/ootdifussion/${session_hash}.png`,
-    );
+    const result = await this.uploadImageToS3(session_hash, generatedImages);
     return {
-      result: url,
+      result,
     };
   }
 
@@ -200,8 +230,8 @@ export class OotdifussionService {
     const session_hash = generateRandomString(11);
 
     // 1. upload image
-    const bodyImagePath = await this.uploadImage(bodyImage);
-    const clothImagePath = await this.uploadImage(clothesImage);
+    const bodyImagePath = await this.uploadImageToHuggingFace(bodyImage);
+    const clothImagePath = await this.uploadImageToHuggingFace(clothesImage);
 
     // 2. join queue
     const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/join?__theme=light`;
@@ -231,23 +261,18 @@ export class OotdifussionService {
       ],
       garmentCategory,
       event_data: null,
-      fn_index: 2,
-      trigger_id: 17,
+      fn_index: 8,
+      trigger_id: 42,
       session_hash,
     });
 
     // 3. Get data stream
-    const generatedImageUrl = await this.poolForResult(session_hash);
+    const generatedImages = await this.poolForResult(session_hash);
 
     // 4. Upload to s3
-    const buffer = await downloadFileAsBuffer(generatedImageUrl);
-    const s3Helpers = new S3Helpers();
-    const url = await s3Helpers.uploadFile(
-      buffer,
-      `artifacts/huggingface/ootdifussion/${session_hash}.png`,
-    );
+    const result = await this.uploadImageToS3(session_hash, generatedImages);
     return {
-      result: url,
+      result,
     };
   }
 }
