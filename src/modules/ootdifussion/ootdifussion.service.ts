@@ -128,13 +128,14 @@ export class OotdifussionService {
     // 4. Upload to s3
     logger.info('开始上传到 oss ');
     const result: string[] = [];
-    for (const generatedImageUrl of generatedImages) {
+    for (const index in generatedImages) {
+      const generatedImageUrl = generatedImages[index];
       logger.info(`上传文件: ${generatedImageUrl}`);
       const buffer = await downloadFileAsBuffer(generatedImageUrl);
       const s3Helpers = new S3Helpers();
       const url = await s3Helpers.uploadFile(
         buffer,
-        `artifacts/huggingface/ootdifussion/${session_hash}.png`,
+        `artifacts/huggingface/ootdifussion/${session_hash}_${index}.png`,
       );
       logger.info(`上传文件 ${generatedImageUrl} 成功`);
       result.push(url);
@@ -253,7 +254,7 @@ export class OotdifussionService {
           size: null,
           mime_type: null,
         },
-
+        garmentCategory,
         imageCount,
         steps,
         guidanceScale,
