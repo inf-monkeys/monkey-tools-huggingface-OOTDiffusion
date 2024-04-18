@@ -53,7 +53,7 @@ export interface HuggingFaceMessage {
 @Injectable()
 export class OotdifussionService {
   private async uploadImageToHuggingFace(imageUrl: string): Promise<string> {
-    const uploadApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/upload?upload_id=${generateRandomString(11)}`;
+    const uploadApi = `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/upload?upload_id=${generateRandomString(11)}`;
     // Path to your file
     const filePath = await downloadFile(imageUrl);
 
@@ -80,7 +80,7 @@ export class OotdifussionService {
   }
 
   private async poolForResult(sessionHash: string): Promise<string[]> {
-    const dataApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/data?session_hash=${sessionHash}`;
+    const dataApi = `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/queue/data?session_hash=${sessionHash}`;
     const { data: stream } = await axios.get(dataApi, {
       responseType: 'stream',
     });
@@ -108,7 +108,7 @@ export class OotdifussionService {
               image: { path },
             } = item;
             result.push(`
-            https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${path}`);
+            https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/file=${path}`);
           }
           break outerLoop;
         }
@@ -166,12 +166,12 @@ export class OotdifussionService {
     const clothImagePath = await this.uploadImageToHuggingFace(clothesImage);
 
     // 2. join queue
-    const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/join?__theme=light`;
+    const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/queue/join?__theme=light`;
     await axios.post<{ event_id: string }>(joinQueueApi, {
       data: [
         {
           path: bodyImagePath,
-          url: `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${bodyImagePath}`,
+          url: `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/file=${bodyImagePath}`,
           orig_name:
             bodyImagePath.split('/')[bodyImagePath.split('/').length - 1],
           size: null,
@@ -179,7 +179,7 @@ export class OotdifussionService {
         },
         {
           path: clothImagePath,
-          url: `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${clothImagePath}`,
+          url: `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/file=${clothImagePath}`,
           orig_name:
             clothImagePath.split('/')[clothImagePath.split('/').length - 1],
           size: null,
@@ -235,12 +235,12 @@ export class OotdifussionService {
     const clothImagePath = await this.uploadImageToHuggingFace(clothesImage);
 
     // 2. join queue
-    const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/queue/join?__theme=light`;
+    const joinQueueApi = `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/queue/join?__theme=light`;
     await axios.post<{ event_id: string }>(joinQueueApi, {
       data: [
         {
           path: bodyImagePath,
-          url: `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${bodyImagePath}`,
+          url: `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/file=${bodyImagePath}`,
           orig_name:
             bodyImagePath.split('/')[bodyImagePath.split('/').length - 1],
           size: null,
@@ -248,7 +248,7 @@ export class OotdifussionService {
         },
         {
           path: clothImagePath,
-          url: `https://levihsu-ootdiffusion.hf.space/--replicas/1b6rr/file=${clothImagePath}`,
+          url: `https://levihsu-ootdiffusion.hf.space/--replicas/eldt3/file=${clothImagePath}`,
           orig_name:
             clothImagePath.split('/')[clothImagePath.split('/').length - 1],
           size: null,
